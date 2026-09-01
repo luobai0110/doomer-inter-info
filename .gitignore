@@ -7,5 +7,9 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
+.venv/
 .idea/
+.env
+
+# uv cache (used when system cache is not writable)
+.uv-cache/

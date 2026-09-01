@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import Base, engine, get_db
+from app.service.weather import get_weather_data
 
 
 @asynccontextmanager
@@ -24,6 +25,12 @@ def root() -> dict[str, str]:
     return {"message": "Hello from inter-info!"}
 
 
+@app.get("/data/weather")
+def get_weather(db: Session = Depends(get_db)) -> dict[str, str]:
+    """拉取并保存最新天气数据。"""
+    get_weather_data(db=db)
+    return {"message": "SUCCESS"}
+
 @app.get("/health/db")
 def db_health(db: Session = Depends(get_db)) -> dict[str, str]:
     """数据库连通性检查。"""
@@ -33,5 +40,4 @@ def db_health(db: Session = Depends(get_db)) -> dict[str, str]:
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)

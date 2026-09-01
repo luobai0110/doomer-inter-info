@@ -8,9 +8,14 @@ dependencies = [
     "fastapi[standard]>=0.141.1",
     "grpcio>=1.83.1",
     "grpcio-tools>=1.83.1",
+    "numpy>=2.5.2",
+    "openmeteo-requests>=1.7.5",
+    "pandas>=3.0.5",
     "psycopg2-binary>=2.9.12",
     "pydantic-settings>=2.15.0",
     "requests>=2.34.2",
+    "requests-cache>=1.3.3",
+    "retry-requests>=2.0.0",
     "sqlalchemy>=2.0.52",
 ]
 [tool.fastapi]

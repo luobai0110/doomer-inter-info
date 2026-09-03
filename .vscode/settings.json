@@ -1,0 +1,6 @@
+{
+    // 打开项目时默认选中 uv 创建的虚拟环境。
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    // 新开集成终端时自动激活 .venv（不影响 uv run）。
+    "python.terminal.activateEnvironment": true
+}

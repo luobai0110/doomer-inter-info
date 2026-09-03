@@ -1,0 +1,44 @@
+{
+    // FastAPI 启动/调试配置：F5 调试运行，Ctrl+F5 不带调试器直接运行。
+    // 两个配置共用同一入口 app.main:app，在调试面板下拉菜单切换。
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // 日常开发：保存文件自动重启服务。
+            // --reload 会把应用放在子进程里运行，subProcess 让调试器跟进子进程，断点才能生效。
+            "name": "FastAPI: 热重载",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--host", "127.0.0.1",
+                "--port", "8000",
+                "--reload"
+            ],
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "subProcess": true,
+            "justMyCode": false
+        },
+        {
+            // 专注调试：单进程运行，断点绑定最稳，无文件监视器干扰。
+            "name": "FastAPI: 无热重载（断点最稳）",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--host", "127.0.0.1",
+                "--port", "8000"
+            ],
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

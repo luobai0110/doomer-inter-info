@@ -4,6 +4,8 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+# 引入模型以注册到 Base.metadata，供启动时自动建表
+from app import model  # noqa: F401
 from app.core.database import Base, engine, get_db
 
 

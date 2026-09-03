@@ -19,8 +19,8 @@ cp .env.example .env   # 按需修改数据库连接信息
   - `SessionLocal`：会话工厂；
   - `Base`：所有 ORM 模型的基类；
   - `get_db`：FastAPI 依赖，请求级会话，自动关闭。
-- `app/main.py` 在启动时执行 `Base.metadata.create_all(bind=engine)` 建表
-  （目前无模型，为空操作），退出时释放连接池。
+- `app/main.py` 在启动时执行 `Base.metadata.create_all(bind=engine)`，按
+  `app/model/__init__.py` 中注册的模型建表，退出时释放连接池。
 
 在路由中使用数据库：
 
@@ -41,3 +41,17 @@ uv run fastapi dev        # 或: uv run uvicorn app.main:app --reload
 ```
 
 健康检查：`GET /health/db`（执行 `SELECT 1` 验证数据库连通性）。
+
+## 行政区划数据
+
+`data/xzqh2020-03.xlsx` 的表头为 `id 省name 省gb 市name 市gb 县name 县gb`，对应
+`app/model/region.py` 中的 `regions` 表，Pydantic 表示为
+`app/schema/region.py` 的 `RegionRecord`（中文表头可直接作为别名）。
+
+导入数据：
+
+```bash
+uv run python -m app.service.import_region
+```
+
+脚本会先建表，再按 Excel 中的 `id` 做 upsert，重复执行不会产生重复数据。

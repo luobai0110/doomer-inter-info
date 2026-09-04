@@ -32,6 +32,10 @@ class Area(Base):
     district_code = Column(BIGINT, index=True)      # 区code
     district_name = Column(String(50))              # 区名称
 
+    # 街道/乡镇
+    street_code = Column(BIGINT, index=True)        # 街道code
+    street_name = Column(String(50))                # 街道名称
+
     # 层级标识（可选，便于区分）
     level = Column(SmallInteger, comment="1-省 2-市 3-区/县 4-街道/乡镇")
 

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
@@ -10,6 +11,11 @@ from app.core.database import Base, engine, get_db
 from app.core.response import ApiResponse, ok
 from app.service.area import sync_area_data
 from app.service.weather import get_weather_data
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
 
 
 @asynccontextmanager

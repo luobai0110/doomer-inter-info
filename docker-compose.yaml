@@ -10,6 +10,26 @@ services:
       - inter-logs:/var/logs/inter
     networks:
       - dev
+    # 单实例滚动更新配置
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.5
+        order: start-first  # 关键：先启新再停旧
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   inter-logs: {}

@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # ---------- 雪花 ID 服务 ----------
     snowflake_id_url: str = "http://192.168.1.3:8088"
 
+    # ---------- 日志 ----------
+    log_level: str = "INFO"
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy 连接 PostgreSQL 的 URL（psycopg2 驱动）。"""

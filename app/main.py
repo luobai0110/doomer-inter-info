@@ -1,5 +1,4 @@
 from contextlib import asynccontextmanager
-import logging
 
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
@@ -7,15 +6,14 @@ from sqlalchemy.orm import Session
 
 # 引入模型以注册到 Base.metadata，供启动时自动建表
 from app import model  # noqa: F401
+from app.core.config import settings
 from app.core.database import Base, engine, get_db
+from app.core.logging import configure_logging
 from app.core.response import ApiResponse, ok
 from app.service.area import sync_area_data
 from app.service.weather import get_weather_data
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
+configure_logging()
 
 
 @asynccontextmanager
@@ -58,4 +56,11 @@ def db_health(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "app.main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+        log_config=None,
+        log_level=settings.log_level.lower(),
+    )

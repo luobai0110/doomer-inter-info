@@ -1,6 +1,6 @@
 import json
-import logging
 import requests
+import structlog
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ code_url = settings.snowflake_id_url
 
 MAX_LEVEL = 4
 REQUEST_TIMEOUT = 30
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 def _log_http_detail(resp: requests.Response) -> None:
@@ -29,18 +29,18 @@ def _log_http_detail(resp: requests.Response) -> None:
         response_body = resp.text
 
     logger.info(
-        "HTTP 请求详情: method=%s url=%s headers=%s body=%s",
-        resp.request.method,
-        resp.request.url,
-        dict(resp.request.headers),
-        request_body,
+        "HTTP 请求详情",
+        method=resp.request.method,
+        url=resp.request.url,
+        headers=dict(resp.request.headers),
+        body=request_body,
     )
     logger.info(
-        "HTTP 响应详情: status_code=%s url=%s headers=%s body=%s",
-        resp.status_code,
-        resp.url,
-        dict(resp.headers),
-        response_body,
+        "HTTP 响应详情",
+        status_code=resp.status_code,
+        url=resp.url,
+        headers=dict(resp.headers),
+        body=response_body,
     )
 
 
@@ -217,20 +217,20 @@ def _save_node(db: Session, node: dict[str, object], parent: dict[str, object]) 
         db.commit()
         db.refresh(existing_area)
         logger.debug(
-            "更新区划: id=%s level=%s area_code=%s full_name=%s",
-            existing_area.id,
-            level,
-            area_code,
-            existing_area.full_name,
+            "更新区划",
+            id=existing_area.id,
+            level=level,
+            area_code=area_code,
+            full_name=existing_area.full_name,
         )
         return False
     area = create_area(db, _build_area(node, parent))
     logger.debug(
-        "新增区划: level=%s area_code=%s area_name=%s full_name=%s",
-        area.level,
-        area.area_code,
-        area.area_name,
-        area.full_name,
+        "新增区划",
+        level=area.level,
+        area_code=area.area_code,
+        area_name=area.area_name,
+        full_name=area.full_name,
     )
     return True
 
@@ -259,7 +259,7 @@ def sync_area_data(db: Session = Depends(get_db)) -> int:
     logger.info("开始同步省市区街道行政区划数据")
     top = _fetch_top()
     inserted = _sync_node(db, top, {})
-    logger.info("行政区划同步完成: 新增 %d 条", inserted)
+    logger.info("行政区划同步完成", inserted=inserted)
     return inserted
 
 

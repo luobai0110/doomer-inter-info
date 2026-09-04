@@ -24,6 +24,7 @@ dependencies = [
     "retry-requests>=2.0.0",
     "sqlalchemy>=2.0.52",
     "uvicorn>=0.52.4",
+    "structlog>=26.1.0",
 ]
 [tool.fastapi]
 entrypoint = "app.main:app"

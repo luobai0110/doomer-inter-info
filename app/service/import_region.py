@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
+import structlog
 from sqlalchemy.dialects.postgresql import Insert, insert as pg_insert
 from sqlalchemy.orm import Session
 
@@ -21,6 +22,7 @@ FIELD_BY_COLUMN = {
     "县gb": "county_gb",
 }
 CODE_COLUMNS = frozenset({"id", "省gb", "市gb", "县gb"})
+logger = structlog.get_logger(__name__)
 
 
 def get_data_dir() -> Path:
@@ -97,13 +99,16 @@ def import_regions(db: Session, path: Path | None = None) -> int:
 
 def main() -> None:
     """命令行入口：读取默认 Excel 并写入数据库。"""
+    from app.core.logging import configure_logging
+
     from app.core.database import Base, SessionLocal, engine
 
+    configure_logging()
     Base.metadata.create_all(bind=engine)
     source = get_data_dir() / DEFAULT_EXCEL_NAME
     with SessionLocal() as db:
         count = import_regions(db, source)
-    print(f"已写入 {count} 条行政区划记录: {source}")
+    logger.info("已写入行政区划记录", count=count, source=str(source))
 
 
 if __name__ == "__main__":

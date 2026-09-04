@@ -5,6 +5,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.database import Base, engine, get_db
+from app.core.response import ApiResponse, ok
+from app.service.area import sync_area_data
 from app.service.weather import get_weather_data
 
 
@@ -20,22 +22,30 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="inter-info", lifespan=lifespan)
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"message": "Hello from inter-info!"}
+@app.get("/", response_model=ApiResponse[dict[str, str]])
+def root() -> ApiResponse[dict[str, str]]:
+    return ok({"message": "Hello from inter-info!"})
 
 
-@app.get("/data/weather")
-def get_weather(db: Session = Depends(get_db)) -> dict[str, str]:
+@app.get("/data/weather", response_model=ApiResponse[dict[str, str]])
+def get_weather(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
     """拉取并保存最新天气数据。"""
     get_weather_data(db=db)
-    return {"message": "SUCCESS"}
+    return ok({"message": "SUCCESS"})
 
-@app.get("/health/db")
-def db_health(db: Session = Depends(get_db)) -> dict[str, str]:
+
+@app.post("/data/area/sync", response_model=ApiResponse[dict[str, int]])
+def sync_area(db: Session = Depends(get_db)) -> ApiResponse[dict[str, int]]:
+    """拉取省市区街道数据并返回新增数量。"""
+    inserted = sync_area_data(db=db)
+    return ok({"inserted": inserted})
+
+
+@app.get("/health/db", response_model=ApiResponse[dict[str, str]])
+def db_health(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
     """数据库连通性检查。"""
     db.execute(text("SELECT 1"))
-    return {"status": "ok"}
+    return ok({"status": "ok"})
 
 
 if __name__ == "__main__":

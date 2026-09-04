@@ -26,6 +26,7 @@ cp .env.example .env
 | `DB_ECHO` | `false` | 是否输出 SQLAlchemy SQL 日志 |
 | `SNOWFLAKE_ID_URL` | `http://192.168.1.3:8088` | 雪花 ID 服务地址 |
 | `LOG_LEVEL` | `INFO` | 日志级别，支持标准日志级别，如 `DEBUG`、`INFO`、`WARNING` |
+| `LOG_DIR` | `/var/logs/inter` | JSON 日志文件目录 |
 
 数据库连接串由 `DB_*` 配置生成，格式为 `postgresql+psycopg2://...`。
 
@@ -103,11 +104,15 @@ uv run python -m app.service.import_region
 
 日志框架基于 [structlog](https://www.structlog.org/)，应用日志和 Uvicorn 运行日志统一输出为单行 JSON。
 日志级别由 `LOG_LEVEL` 控制。
+业务模块通过 [app/core/logging.py](app/core/logging.py) 中的 `get_logger` 获取 logger。
+
+容器默认将日志文件写入 `/var/logs/inter/inter.log`，并保留最近 30 天的按天滚动文件。
+compose 使用 named volume 将该目录持久化；应用仍会同时输出到 stdout，方便 `docker logs` 查看。
 
 输出示例：
 
 ```json
-{"event": "HTTP 请求详情", "method": "GET", "url": "https://dmfw.mca.gov.cn/9095/xzqh/getList", "logger": "app.service.area", "level": "info", "timestamp": "2026-09-04T08:00:00.000000Z"}
+{"timestamp": "2026-09-04T08:00:00.000000Z", "level": "info", "logger": "app.service.area", "event": "HTTP 请求详情", "method": "GET", "url": "https://dmfw.mca.gov.cn/9095/xzqh/getList"}
 ```
 
 日志输出到 stdout，便于容器或日志采集器直接解析。

@@ -2,10 +2,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pandas as pd
-import structlog
 from sqlalchemy.dialects.postgresql import Insert, insert as pg_insert
 from sqlalchemy.orm import Session
 
+from app.core.logging import get_logger
 from app.model.region import Region
 from app.schema.region import RegionRecord
 
@@ -22,7 +22,7 @@ FIELD_BY_COLUMN = {
     "县gb": "county_gb",
 }
 CODE_COLUMNS = frozenset({"id", "省gb", "市gb", "县gb"})
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 def get_data_dir() -> Path:

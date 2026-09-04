@@ -46,7 +46,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha
+            type=schedule,pattern={{date 'YYYYMMDD-HHmmss' tz='Asia/Shanghai'}}
 
       - name: Build and push image
         uses: docker/build-push-action@v7

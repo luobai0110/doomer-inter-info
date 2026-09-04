@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # ---------- 日志 ----------
     log_level: str = "INFO"
+    log_dir: str = "/var/logs/inter"
 
     @property
     def database_url(self) -> str:

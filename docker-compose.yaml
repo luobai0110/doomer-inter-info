@@ -1,0 +1,13 @@
+services:
+  inter-info:
+    image: registry.cn-chengdu.aliyuncs.com/doomer/inter-info:master
+    container_name: inter-info
+    env_file:
+      - .env
+    ports:
+      - "19504:8000"
+    volumes:
+      - inter-logs:/var/logs/inter
+
+volumes:
+  inter-logs: {}

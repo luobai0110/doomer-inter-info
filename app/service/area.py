@@ -1,12 +1,12 @@
 import json
 import requests
-import structlog
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.logging import get_logger
 from app.model.area import Area
 
 base_url = "https://dmfw.mca.gov.cn/9095/xzqh/getList"
@@ -14,7 +14,7 @@ code_url = settings.snowflake_id_url
 
 MAX_LEVEL = 4
 REQUEST_TIMEOUT = 30
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 def _log_http_detail(resp: requests.Response) -> None:

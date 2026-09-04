@@ -25,7 +25,8 @@ WORKDIR /app
 
 RUN groupadd --system --gid 10001 inter-info \
  && useradd --system --uid 10001 --gid 10001 --no-create-home --home-dir /app --shell /usr/sbin/nologin inter-info \
- && chown inter-info:inter-info /app
+ && mkdir -p /var/logs/inter \
+ && chown inter-info:inter-info /app /var/logs/inter
 
 COPY --from=builder --chown=inter-info:inter-info /build/.venv /app/.venv
 COPY --from=builder --chown=inter-info:inter-info /build/app /app/app

@@ -58,7 +58,7 @@ def _make_formatter(
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             _canonical_field_order,
-            structlog.processors.JSONRenderer(),
+            structlog.processors.JSONRenderer(ensure_ascii=False),
         ],
     )
 

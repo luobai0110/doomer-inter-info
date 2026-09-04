@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 import requests
 from fastapi import Depends
 from sqlalchemy import select
@@ -6,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.http import get_with_retry
 from app.core.logging import get_logger
 from app.model.area import Area
 
@@ -14,7 +17,12 @@ code_url = settings.snowflake_id_url
 
 MAX_LEVEL = 4
 REQUEST_TIMEOUT = 30
+AREA_REQUEST_PAUSE_INTERVAL = 200
+AREA_REQUEST_PAUSE_SECONDS = 1
+AREA_BACKOFF_SECONDS = (0.5, 1.0, 2.0)
 logger = get_logger(__name__)
+_area_request_count = 0
+_area_request_lock = threading.Lock()
 
 
 def _log_http_detail(resp: requests.Response) -> None:
@@ -59,7 +67,11 @@ def get_code(db: Session, level: int) -> list[Area]:
 
 def get_unique_code() -> int:
     """从雪花 ID 服务获取唯一编码。"""
-    resp = requests.get(url=code_url, timeout=REQUEST_TIMEOUT)
+    resp = get_with_retry(
+        url=code_url,
+        timeout=REQUEST_TIMEOUT,
+        backoff_seconds=AREA_BACKOFF_SECONDS,
+    )
     _log_http_detail(resp)
     resp.raise_for_status()
     return resp.json()[0]
@@ -74,10 +86,12 @@ def _to_bigint(value) -> int | None:
 
 def _fetch_top() -> dict[str, object]:
     """请求省级数据，返回包含省级节点和市级 children 的 data。"""
-    resp = requests.get(
+    resp = get_with_retry(
         url=base_url,
         params={"maxLevel": 1},
         timeout=REQUEST_TIMEOUT,
+        backoff_seconds=AREA_BACKOFF_SECONDS,
+        on_attempt=_register_area_request,
     )
     _log_http_detail(resp)
     resp.raise_for_status()
@@ -86,15 +100,37 @@ def _fetch_top() -> dict[str, object]:
 
 def _fetch_children(area_code: str) -> list[dict[str, object]]:
     """请求指定区划的下一级 children。"""
-    resp = requests.get(
+    resp = get_with_retry(
         url=base_url,
         params={"maxLevel": 1, "code": area_code},
         timeout=REQUEST_TIMEOUT,
+        backoff_seconds=AREA_BACKOFF_SECONDS,
+        on_attempt=_register_area_request,
     )
     _log_http_detail(resp)
     resp.raise_for_status()
     data = resp.json()["data"]
     return data.get("children") or []
+
+
+def _register_area_request(
+    _response: requests.Response | None,
+    _error: requests.RequestException | None,
+) -> None:
+    """统计行政区划接口实际请求次数，达到阈值后暂停。"""
+    global _area_request_count
+    should_pause = False
+    with _area_request_lock:
+        _area_request_count += 1
+        should_pause = _area_request_count % AREA_REQUEST_PAUSE_INTERVAL == 0
+
+    if should_pause:
+        logger.info(
+            "行政区划接口请求达到阈值，暂停",
+            request_count=_area_request_count,
+            pause_seconds=AREA_REQUEST_PAUSE_SECONDS,
+        )
+        time.sleep(AREA_REQUEST_PAUSE_SECONDS)
 
 
 def _child_context(node: dict[str, object], parent: dict[str, object]) -> dict[str, object]:

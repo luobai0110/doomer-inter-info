@@ -14,4 +14,3 @@ wheels/
 # uv cache (used when system cache is not writable)
 .uv-cache/
 *.sqlite
-uv.lock

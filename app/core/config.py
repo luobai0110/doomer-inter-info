@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     db_max_overflow: int = 20
     db_echo: bool = False
 
+    # ---------- 雪花 ID 服务 ----------
+    snowflake_id_url: str = "http://192.168.1.3:8088"
+
     @property
     def database_url(self) -> str:
         """SQLAlchemy 连接 PostgreSQL 的 URL（psycopg2 驱动）。"""

@@ -4,8 +4,9 @@ FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0 \
-    UV_PYTHON=/usr/local/bin/python
-WORKDIR /build
+    UV_PYTHON=/usr/local/bin/python \
+    UV_PROJECT_ENVIRONMENT=/app/.venv
+WORKDIR /app
 
 COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -28,9 +29,9 @@ RUN groupadd --system --gid 10001 inter-info \
  && mkdir -p /var/logs/inter \
  && chown inter-info:inter-info /app /var/logs/inter
 
-COPY --from=builder --chown=inter-info:inter-info /build/.venv /app/.venv
-COPY --from=builder --chown=inter-info:inter-info /build/app /app/app
-COPY --from=builder --chown=inter-info:inter-info /build/data /app/data
+COPY --from=builder --chown=inter-info:inter-info /app/.venv /app/.venv
+COPY --from=builder --chown=inter-info:inter-info /app/app /app/app
+COPY --from=builder --chown=inter-info:inter-info /app/data /app/data
 
 USER inter-info
 EXPOSE 8000

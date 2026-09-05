@@ -21,10 +21,16 @@ FROM python:3.14-slim-bookworm
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    TZ=Asia/Shanghai
 WORKDIR /app
 
-RUN groupadd --system --gid 10001 inter-info \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+ && echo $TZ > /etc/timezone \
+ && groupadd --system --gid 10001 inter-info \
  && useradd --system --uid 10001 --gid 10001 --no-create-home --home-dir /app --shell /usr/sbin/nologin inter-info \
  && mkdir -p /var/logs/inter \
  && chown inter-info:inter-info /app /var/logs/inter

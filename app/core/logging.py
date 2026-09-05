@@ -1,8 +1,10 @@
 import logging
 import sys
+from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import structlog
 from structlog.typing import EventDict, Processor
@@ -10,6 +12,7 @@ from structlog.typing import EventDict, Processor
 from app.core.config import settings
 
 JSON_FIELD_ORDER = ("timestamp", "level", "logger", "event")
+LOG_TIMEZONE = ZoneInfo("Asia/Shanghai")
 
 
 def _resolve_log_level() -> int:
@@ -49,6 +52,29 @@ def _canonical_field_order(
     return ordered
 
 
+def _drop_color_message(
+    _logger: Any,
+    _method_name: str,
+    event_dict: EventDict,
+) -> EventDict:
+    """丢弃 Uvicorn 附带的 color_message，避免 ANSI 转义进入 JSON。"""
+    event_dict.pop("color_message", None)
+    return event_dict
+
+
+def _add_local_timestamp(
+    _logger: Any,
+    _method_name: str,
+    event_dict: EventDict,
+) -> EventDict:
+    """按上海时间生成 yyyy-MM-dd HH:mm:ss.SSS 格式时间戳。"""
+    now = datetime.now(LOG_TIMEZONE)
+    event_dict["timestamp"] = (
+        f"{now.strftime('%Y-%m-%d %H:%M:%S')}.{now.microsecond // 1000:03d}"
+    )
+    return event_dict
+
+
 def _make_formatter(
     shared_processors: list[Processor],
 ) -> structlog.stdlib.ProcessorFormatter:
@@ -76,7 +102,8 @@ def configure_logging() -> None:
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.stdlib.ExtraAdder(),
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        _drop_color_message,
+        _add_local_timestamp,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]

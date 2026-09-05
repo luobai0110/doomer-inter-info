@@ -19,30 +19,31 @@ def get_position(db: Session) -> None:
         logger.warning("高德服务密钥未配置")
         return
 
-    for area_name in areas:
-        logger.info("请求高德地理编码", address=area_name)
-        logger.info("请求信息, url=%s, address=%s", base_url=base_url, area_name=area_name)
+    for area in areas:
+        logger.info("请求高德地理编码", address=area.area_name)
+        logger.info("请求信息", base_url=base_url, area_name=area)
         resp = get_with_retry(
             url=base_url,
-            params={"address": area_name, "key": settings.amap_key},
+            params={"address": area, "key": settings.amap_key},
             timeout=REQUEST_TIMEOUT,
         )
 
-        logger.info("响应信息", base_url, area_name)
+        logger.info("响应信息", resp=resp.text)
         if resp.status_code != 200:
             logger.warning(
                 "高德地理编码请求失败",
-                address=area_name,
+                address=area.full_name,
+                city=area.area_code[:6],
                 status_code=resp.status_code,
             )
             continue
-        logger.info("响应细心, url=%s, address=%s", resp=resp.text)
+        logger.info("响应信息", resp=resp.text)
         data = resp.json()
         geocodes = data.get("geocodes") or []
         if not geocodes:
             logger.warning(
                 "高德地理编码结果为空",
-                address=area_name,
+                address=area,
                 infocode=data.get("infocode"),
             )
             continue
@@ -52,7 +53,7 @@ def get_position(db: Session) -> None:
         if len(coordinates) != 2:
             logger.warning(
                 "高德地理编码坐标格式错误",
-                address=area_name,
+                address=area,
                 location=location,
             )
             continue
@@ -63,19 +64,19 @@ def get_position(db: Session) -> None:
         except ValueError:
             logger.warning(
                 "高德地理编码坐标解析失败",
-                address=area_name,
+                address=area,
                 location=location,
             )
             continue
 
-        area = get_area_by_name(area_name, db)
+        area = get_area_by_name(area, db)
         if area is None:
-            logger.warning("未找到区划记录", address=area_name)
+            logger.warning("未找到区划记录", address=area)
             continue
 
         area.longitude = longitude
         area.latitude = latitude
         update_area_by_id(area, db)
-        logger.debug("区划坐标已更新", address=area_name)
+        logger.debug("区划坐标已更新", address=area)
 
     logger.info("completed")

@@ -331,8 +331,8 @@ def sync_area_data(db: Session) -> int:
     return inserted
 
 
-def get_all_area_names(db: Session) -> list[str]:
-    area_names = select(Area.area_name).where(Area.area_name.isnot(None), Area.area_name != '')
+def get_all_area_names(db: Session) -> list[Area]:
+    area_names = select(Area).where(Area.area_name.isnot(None), Area.area_name != '', Area.longitude.isnot(None))
     return list(db.scalars(area_names))
 
 

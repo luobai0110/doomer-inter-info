@@ -24,7 +24,7 @@ def get_position(db: Session) -> None:
         logger.info("请求信息", base_url=base_url, area_name=area)
         resp = get_with_retry(
             url=base_url,
-            params={"address": area, "key": settings.amap_key},
+            params={"address": area.full_name, "key": settings.amap_key, "city": area.area_code[:6]},
             timeout=REQUEST_TIMEOUT,
         )
 

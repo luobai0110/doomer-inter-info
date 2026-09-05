@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 from collections.abc import Callable
 from typing import Any
@@ -11,6 +12,25 @@ DEFAULT_BACKOFF_SECONDS = (0.5, 1.0, 2.0)
 RETRYABLE_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 logger = logging.getLogger(__name__)
+
+
+class RateLimiter:
+    """跨线程限制实际 HTTP 请求频率。"""
+
+    def __init__(self, requests_per_second: int) -> None:
+        self._min_interval_seconds = 1 / requests_per_second
+        self._lock = threading.Lock()
+        self._next_request_time = 0.0
+
+    def wait(self) -> None:
+        """等待到当前线程的下一个请求槽位。"""
+        with self._lock:
+            now = time.monotonic()
+            delay_seconds = max(0.0, self._next_request_time - now)
+            self._next_request_time = now + delay_seconds + self._min_interval_seconds
+
+        if delay_seconds > 0:
+            time.sleep(delay_seconds)
 
 
 def _log_retry(
@@ -38,6 +58,7 @@ def get_with_retry(
     *,
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_seconds: tuple[float, ...] = DEFAULT_BACKOFF_SECONDS,
+    rate_limiter: RateLimiter | None = None,
     on_attempt: Callable[
         [requests.Response | None, requests.RequestException | None], None
     ]
@@ -52,6 +73,8 @@ def get_with_retry(
     for attempt in range(max_retries + 1):
         last_response = None
         last_error = None
+        if rate_limiter is not None:
+            rate_limiter.wait()
         try:
             last_response = requests.get(url=url, **kwargs)
         except (requests.ConnectionError, requests.Timeout) as exc:

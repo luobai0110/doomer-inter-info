@@ -3,7 +3,6 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main
       - master
       - dev/dev
       - release
@@ -47,7 +46,6 @@ jobs:
           tags: |
             type=ref,event=branch,enable=${{ github.ref != 'refs/heads/master' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev/dev' }}
-            type=raw,value={{date 'YYYYMMDDHHmmss' tz='Asia/Shanghai'}},enable=${{ github.ref == 'refs/heads/dev/dev' }}
             type=semver,pattern={{version}}
 
       - name: Build and push image

@@ -16,7 +16,7 @@ base_url = "https://restapi.amap.com/v3/geocode/geo"
 
 def get_position(db:Session = Depends(get_db)):
     logger.info("开始同步经纬度")
-    areas = get_all_area_names()
+    areas = get_all_area_names(db)
     key = os.getenv("AMAP_KAY")
     params_list = []
     for area in areas:

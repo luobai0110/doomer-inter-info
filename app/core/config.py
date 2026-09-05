@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,6 +23,13 @@ class Settings(BaseSettings):
 
     # ---------- 雪花 ID 服务 ----------
     snowflake_id_url: str = "http://192.168.1.3:8088"
+
+    # ---------- 高德服务 ----------
+    # 兼容历史环境变量 AMAP_KAY，同时支持正确拼写的 AMAP_KEY。
+    amap_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("AMAP_KEY", "AMAP_KAY"),
+    )
 
     # ---------- 日志 ----------
     log_level: str = "INFO"

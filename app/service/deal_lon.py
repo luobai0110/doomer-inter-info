@@ -1,38 +1,76 @@
-import logging
-import os
-from pathlib import Path
-
-import pandas as pd
-import requests
-from fastapi import Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
-from app.core.http import logger
+from app.core.config import settings
+from app.core.http import get_with_retry
+from app.core.logging import get_logger
 from app.service.area import get_all_area_names, get_area_by_name, update_area_by_id
 
 base_url = "https://restapi.amap.com/v3/geocode/geo"
+REQUEST_TIMEOUT = 30
+logger = get_logger(__name__)
 
 
-def get_position(db:Session = Depends(get_db)):
+def get_position(db: Session) -> None:
     logger.info("开始同步经纬度")
     areas = get_all_area_names(db)
-    key = os.getenv("AMAP_KAY")
-    params_list = []
-    for area in areas:
-        params_list.append(
-            {
-                "name": area,
-                "key": key
-            }
+
+    if not settings.amap_key:
+        logger.warning("高德服务密钥未配置")
+        return
+
+    for area_name in areas:
+        logger.info("请求高德地理编码", address=area_name)
+        resp = get_with_retry(
+            url=base_url,
+            params={"address": area_name, "key": settings.amap_key},
+            timeout=REQUEST_TIMEOUT,
         )
-    for param in params_list:
-        logger.info("请求信息: url: " + base_url + "params： " + param)
-        resp = requests.get(url=base_url, params=param)
-        logger.info("返回信息: " + resp.text)
-        if resp.status_code == 200:
-            area = get_area_by_name(param['name'])
-            data = resp.json()
-            area.latitude = data['location'][1]
-            area.longitude = data['latitude'][0]
-            update_area_by_id(area, db)
+        if resp.status_code != 200:
+            logger.warning(
+                "高德地理编码请求失败",
+                address=area_name,
+                status_code=resp.status_code,
+            )
+            continue
+
+        data = resp.json()
+        geocodes = data.get("geocodes") or []
+        if not geocodes:
+            logger.warning(
+                "高德地理编码结果为空",
+                address=area_name,
+                infocode=data.get("infocode"),
+            )
+            continue
+
+        location = str(geocodes[0].get("location", ""))
+        coordinates = location.split(",")
+        if len(coordinates) != 2:
+            logger.warning(
+                "高德地理编码坐标格式错误",
+                address=area_name,
+                location=location,
+            )
+            continue
+
+        try:
+            longitude = float(coordinates[0])
+            latitude = float(coordinates[1])
+        except ValueError:
+            logger.warning(
+                "高德地理编码坐标解析失败",
+                address=area_name,
+                location=location,
+            )
+            continue
+
+        area = get_area_by_name(area_name, db)
+        if area is None:
+            logger.warning("未找到区划记录", address=area_name)
+            continue
+
+        area.longitude = longitude
+        area.latitude = latitude
+        update_area_by_id(area, db)
+        logger.debug("区划坐标已更新", address=area_name)

@@ -2,12 +2,10 @@ import json
 import threading
 import time
 import requests
-from fastapi import Depends
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.database import get_db
 from app.core.http import get_with_retry
 from app.core.logging import get_logger
 from app.model.area import Area
@@ -307,7 +305,7 @@ def _sync_node(db: Session, node: dict[str, object], parent: dict[str, object]) 
     return saved
 
 
-def sync_area_data(db: Session = Depends(get_db)) -> int:
+def sync_area_data(db: Session) -> int:
     """拉取省、市、区县三级行政区划并写入数据库，返回新增数量。"""
     logger.info("开始同步省市区县行政区划数据")
     top = _fetch_top()
@@ -333,20 +331,20 @@ def sync_area_data(db: Session = Depends(get_db)) -> int:
     return inserted
 
 
-def get_all_area_names(db: Session = Depends(get_db)) -> list[str]:
+def get_all_area_names(db: Session) -> list[str]:
     area_names = select(Area.area_name).where(Area.area_name.isnot(None), Area.area_name != '')
     return list(db.scalars(area_names))
 
 
-def get_area_by_name(name: str, db: Session = Depends(get_db)) -> Area:
+def get_area_by_name(name: str, db: Session) -> Area | None:
     stmt = select(Area).where(Area.area_name == name)
-    return db.execute(stmt).scalar_one_or_none()
+    return db.scalars(stmt).first()
 
 
-def update_area_by_id(area: Area, db:Session = Depends(get_db)) -> bool:
-    old_area = db.query(Area).filter(Area.code == area.code).filter()
+def update_area_by_id(area: Area, db: Session) -> bool:
+    old_area = db.scalar(select(Area).where(Area.id == area.id))
 
-    if not old_area:
+    if old_area is None:
         return False
 
     old_area.longitude = area.longitude

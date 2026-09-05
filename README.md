@@ -92,13 +92,14 @@ id 省name 省gb 市name 市gb 县name 县gb
 数据对应 [app/model/region.py](app/model/region.py) 中的 `regions` 表，Pydantic 表示为
 [app/schema/region.py](app/schema/region.py) 的 `RegionRecord`。
 
-导入命令：
+Web 入口：
 
 ```bash
-uv run python -m app.service.import_region
+curl -X POST http://127.0.0.1:8000/data/region/import
 ```
 
-脚本会先建表，再按 Excel 中的 `id` 执行 PostgreSQL upsert，重复执行不会产生重复数据。
+应用启动时会先建表；接口按 Excel 中的 `id` 执行 PostgreSQL upsert，重复执行不会产生重复数据。
+返回的 `processed` 是 upsert 影响的记录数量，包含新增和更新的记录。
 
 ## 日志
 

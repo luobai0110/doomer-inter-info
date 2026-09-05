@@ -11,6 +11,7 @@ from app.core.database import Base, engine, get_db
 from app.core.logging import configure_logging
 from app.core.response import ApiResponse, ok
 from app.service.area import sync_area_data
+from app.service.import_region import import_regions
 from app.service.weather import get_weather_data
 
 configure_logging()
@@ -45,6 +46,13 @@ def sync_area(db: Session = Depends(get_db)) -> ApiResponse[dict[str, int]]:
     """拉取省市区街道数据并返回新增数量。"""
     inserted = sync_area_data(db=db)
     return ok({"inserted": inserted})
+
+
+@app.post("/data/region/import", response_model=ApiResponse[dict[str, int]])
+def import_region(db: Session = Depends(get_db)) -> ApiResponse[dict[str, int]]:
+    """导入默认行政区划 Excel，返回 upsert 影响的记录数量。"""
+    processed = import_regions(db=db)
+    return ok({"processed": processed})
 
 
 @app.get("/health/db", response_model=ApiResponse[dict[str, str]])

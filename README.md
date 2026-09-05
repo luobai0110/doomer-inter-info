@@ -25,6 +25,8 @@ cp .env.example .env
 | `DB_MAX_OVERFLOW` | `20` | 连接池允许的额外连接数 |
 | `DB_ECHO` | `false` | 是否输出 SQLAlchemy SQL 日志 |
 | `SNOWFLAKE_ID_URL` | `http://192.168.1.3:8088` | 雪花 ID 服务地址 |
+| `SERVICE_NAME` | `inter-info` | 日志中的服务标识 |
+| `ENVIRONMENT` | `local` | 日志中的运行环境标识 |
 | `LOG_LEVEL` | `INFO` | 日志级别，支持标准日志级别，如 `DEBUG`、`INFO`、`WARNING` |
 | `LOG_DIR` | `/var/logs/inter` | JSON 日志文件目录 |
 
@@ -112,7 +114,24 @@ compose 使用 named volume 将该目录持久化；应用仍会同时输出到 
 输出示例：
 
 ```json
-{"timestamp": "2026-09-04T08:00:00.000000Z", "level": "info", "logger": "app.service.area", "event": "HTTP 请求详情", "method": "GET", "url": "https://dmfw.mca.gov.cn/9095/xzqh/getList"}
+{
+  "timestamp": "2025-04-01T12:00:00.123Z",
+  "level": "ERROR",
+  "logger": "user.service",
+  "message": "failed to create user",
+  "trace_id": "abc123",
+  "service": "order-service",
+  "environment": "production",
+  "host": "10.0.0.1",
+  "context": {
+    "user_id": 1001,
+    "request_path": "/api/users",
+    "error_code": 500
+  }
+}
 ```
+
+公共字段保留在顶层；`logger.info(a=a)` 中的 `a` 等业务字段会聚合到 `context`。`trace_id` 可通过
+`logger.bind(trace_id="abc123")` 或 `structlog.contextvars.bind_contextvars(trace_id="abc123")` 注入。
 
 日志输出到 stdout，便于容器或日志采集器直接解析。

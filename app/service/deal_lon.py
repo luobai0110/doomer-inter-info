@@ -77,3 +77,5 @@ def get_position(db: Session) -> None:
         area.latitude = latitude
         update_area_by_id(area, db)
         logger.debug("区划坐标已更新", address=area_name)
+
+    logger.info("completed")

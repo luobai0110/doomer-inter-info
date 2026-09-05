@@ -3,7 +3,7 @@ import threading
 import time
 import requests
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -113,8 +113,8 @@ def _fetch_children(area_code: str) -> list[dict[str, object]]:
 
 
 def _register_area_request(
-    _response: requests.Response | None,
-    _error: requests.RequestException | None,
+        _response: requests.Response | None,
+        _error: requests.RequestException | None,
 ) -> None:
     """统计行政区划接口实际请求次数，达到阈值后暂停。"""
     global _area_request_count
@@ -192,9 +192,9 @@ def _full_name(node: dict[str, object], parent: dict[str, object]) -> str:
 
 
 def _apply_area_fields(
-    area: Area,
-    node: dict[str, object],
-    parent: dict[str, object],
+        area: Area,
+        node: dict[str, object],
+        parent: dict[str, object],
 ) -> None:
     """将接口节点区划字段写入 Area 记录。"""
     area.area_code = str(node["code"])
@@ -331,3 +331,29 @@ def sync_area_data(db: Session = Depends(get_db)) -> int:
         )
     logger.info("行政区划同步完成", inserted=inserted)
     return inserted
+
+
+def get_all_area_names(db: Session = Depends(get_db)) -> list[str]:
+    area_names = select(Area.area_name).where(Area.area_name.isnot(None), Area.area_name != '')
+    return list(db.scalars(area_names))
+
+
+def get_area_by_name(name: str, db: Session = Depends(get_db)) -> Area:
+    stmt = select(Area).where(Area.area_name == name)
+    return db.execute(stmt).scalar_one_or_none()
+
+
+def update_area_by_id(area: Area, db:Session = Depends(get_db)) -> bool:
+    old_area = db.query(Area).filter(Area.code == area.code).filter()
+
+    if not old_area:
+        return False
+
+    old_area.longitude = area.longitude
+    old_area.latitude = area.latitude
+
+    db.commit()
+
+    db.refresh(old_area)
+
+    return True

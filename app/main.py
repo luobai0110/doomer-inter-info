@@ -10,7 +10,8 @@ from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.core.logging import configure_logging
 from app.core.response import ApiResponse, ok
-from app.service.area import sync_area_data
+from app.service.area import sync_area_data, update_area_by_id
+from app.service.deal_lon import get_position
 from app.service.import_region import import_regions
 from app.service.weather import get_weather_data
 
@@ -61,6 +62,10 @@ def db_health(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
     db.execute(text("SELECT 1"))
     return ok({"status": "ok"})
 
+@app.get("/data/sync/position", response_model=ApiResponse[dict[str, str]])
+def sync_position(db:Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
+    get_position(db)
+    return ok({"status": "ok"})
 
 if __name__ == "__main__":
     import uvicorn

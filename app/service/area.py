@@ -15,9 +15,9 @@ from app.model.area import Area
 base_url = "https://dmfw.mca.gov.cn/9095/xzqh/getList"
 code_url = settings.snowflake_id_url
 
-MAX_LEVEL = 4
+MAX_LEVEL = 3
 REQUEST_TIMEOUT = 30
-AREA_REQUEST_PAUSE_INTERVAL = 200
+AREA_REQUEST_PAUSE_INTERVAL = 100
 AREA_REQUEST_PAUSE_SECONDS = 1
 AREA_BACKOFF_SECONDS = (0.5, 1.0, 2.0)
 logger = get_logger(__name__)
@@ -53,10 +53,9 @@ def _log_http_detail(resp: requests.Response) -> None:
 
 
 def create_area(db: Session, area: Area) -> Area:
-    """创建区划记录。"""
+    """将新增区划记录加入当前事务。"""
     db.add(area)
-    db.commit()
-    db.refresh(area)
+    db.flush()
     return area
 
 
@@ -85,7 +84,7 @@ def _to_bigint(value) -> int | None:
 
 
 def _fetch_top() -> dict[str, object]:
-    """请求省级数据，返回包含省级节点和市级 children 的 data。"""
+    """请求全国目录数据，返回包含省级 children 的全国节点。"""
     resp = get_with_retry(
         url=base_url,
         params={"maxLevel": 1},
@@ -250,8 +249,7 @@ def _save_node(db: Session, node: dict[str, object], parent: dict[str, object]) 
     )
     if existing_area is not None:
         _apply_area_fields(existing_area, node, parent)
-        db.commit()
-        db.refresh(existing_area)
+        db.flush()
         logger.debug(
             "更新区划",
             id=existing_area.id,
@@ -273,14 +271,33 @@ def _save_node(db: Session, node: dict[str, object], parent: dict[str, object]) 
 
 def _sync_node(db: Session, node: dict[str, object], parent: dict[str, object]) -> int:
     """递归同步节点及其下级区划，返回新增数量。"""
-    saved = 1 if _save_node(db, node, parent) else 0
     level = int(node["level"])
+    children = node.get("children") or []
+    if level < MAX_LEVEL and not children:
+        try:
+            children = _fetch_children(str(node["code"]))
+        except requests.RequestException as exc:
+            logger.warning(
+                "下级行政区划请求失败，跳过区划",
+                level=level,
+                area_code=str(node["code"]),
+                error=str(exc),
+            )
+            return 0
+
+    try:
+        saved = 1 if _save_node(db, node, parent) else 0
+    except requests.RequestException as exc:
+        logger.warning(
+            "区划编码请求失败，跳过区划",
+            level=level,
+            area_code=str(node["code"]),
+            error=str(exc),
+        )
+        return 0
+
     if level >= MAX_LEVEL:
         return saved
-
-    children = node.get("children") or []
-    if not children:
-        children = _fetch_children(str(node["code"]))
 
     child_parent = _child_context(node, parent)
     for child in children:
@@ -291,19 +308,26 @@ def _sync_node(db: Session, node: dict[str, object], parent: dict[str, object]) 
 
 
 def sync_area_data(db: Session = Depends(get_db)) -> int:
-    """拉取省、市、区县、街道四级行政区划并写入数据库，返回新增数量。"""
-    logger.info("开始同步省市区街道行政区划数据")
+    """拉取省、市、区县三级行政区划并写入数据库，返回新增数量。"""
+    logger.info("开始同步省市区县行政区划数据")
     top = _fetch_top()
-    inserted = _sync_node(db, top, {})
+    inserted = 0
+    top_level_nodes = top.get("children") or []
+    for node in top_level_nodes:
+        area_code = str(node.get("code"))
+        try:
+            with db.begin():
+                inserted += _sync_node(db, node, {})
+        except requests.RequestException as exc:
+            logger.warning(
+                "省级行政区划请求失败，跳过省级行政区",
+                area_code=area_code,
+                error=str(exc),
+            )
+            continue
+        logger.debug(
+            "省级行政区划事务提交",
+            area_code=area_code,
+        )
     logger.info("行政区划同步完成", inserted=inserted)
     return inserted
-
-
-def get_province_code(db: Session = Depends(get_db)) -> int:
-    """兼容旧入口：同步省市区街道数据。"""
-    return sync_area_data(db)
-
-
-def get_city_code(db: Session = Depends(get_db)) -> int:
-    """兼容旧入口：同步省市区街道数据。"""
-    return sync_area_data(db)

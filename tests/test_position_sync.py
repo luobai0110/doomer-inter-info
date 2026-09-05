@@ -10,6 +10,7 @@ class FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
         self.status_code = 200
+        self.text = '{"status": "1", "geocodes": [{"location": "116.397428,39.90923"}]}'
 
     def json(self) -> dict[str, object]:
         return self.payload
@@ -33,13 +34,9 @@ class FakeSession:
         self.area = area
         self.committed = False
         self.refreshed: list[Area] = []
-        self.scalars_count = 0
 
     def scalars(self, _statement: object):
-        self.scalars_count += 1
-        if self.scalars_count == 1:
-            return [self.area.area_name]
-        return FakeQueryResult(self.area)
+        return [self.area]
 
     def scalar(self, _statement: object) -> Area | None:
         return self.area
@@ -55,7 +52,9 @@ class GetPositionTests(unittest.TestCase):
     def test_geocodes_area_and_updates_database(self) -> None:
         area = Area()
         area.id = 12
+        area.area_code = "110000000000"
         area.area_name = "Test Area"
+        area.full_name = "中国Test Area"
         db = FakeSession(area)
         request = {
             "url": "",
@@ -76,7 +75,7 @@ class GetPositionTests(unittest.TestCase):
             get_position(db)
 
         self.assertEqual(
-            {"address": "Test Area", "key": "test-key"},
+            {"address": "中国Test Area", "city": "110000", "key": "test-key"},
             request["params"],
         )
         self.assertEqual(116.397428, area.longitude)

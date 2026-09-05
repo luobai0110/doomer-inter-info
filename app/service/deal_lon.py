@@ -69,7 +69,7 @@ def get_position(db: Session) -> None:
             )
             continue
 
-        area = get_area_by_name(area, db)
+        area = get_area_by_name(area.area_name, db)
         if area is None:
             logger.warning("未找到区划记录", address=area)
             continue

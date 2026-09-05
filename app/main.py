@@ -62,10 +62,11 @@ def db_health(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
     db.execute(text("SELECT 1"))
     return ok({"status": "ok"})
 
-@app.get("/data/sync/position", response_model=ApiResponse[dict[str, str]])
-def sync_position(db:Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
-    get_position(db)
-    return ok({"status": "ok"})
+@app.get("/data/sync/position", response_model=ApiResponse[int])
+def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
+    """补齐区划经纬度，返回更新的记录数量。"""
+    updated_count = get_position(db)
+    return ok(updated_count)
 
 if __name__ == "__main__":
     import uvicorn

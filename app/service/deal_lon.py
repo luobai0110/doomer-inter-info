@@ -4,20 +4,21 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.http import get_with_retry
 from app.core.logging import get_logger
-from app.service.area import get_all_area_names, get_area_by_name, update_area_by_id
+from app.service.area import get_all_area_names
 
 base_url = "https://restapi.amap.com/v3/geocode/geo"
 REQUEST_TIMEOUT = 30
 logger = get_logger(__name__)
 
 
-def get_position(db: Session) -> None:
+def get_position(db: Session) -> int:
     logger.info("开始同步经纬度")
     areas = get_all_area_names(db)
+    updated_count = 0
 
     if not settings.amap_key:
         logger.warning("高德服务密钥未配置")
-        return
+        return updated_count
 
     for area in areas:
         logger.info("请求高德地理编码", address=area.area_name)
@@ -69,14 +70,12 @@ def get_position(db: Session) -> None:
             )
             continue
 
-        area = get_area_by_name(area.area_name, db)
-        if area is None:
-            logger.warning("未找到区划记录", address=area)
-            continue
-
         area.longitude = longitude
         area.latitude = latitude
-        update_area_by_id(area, db)
-        logger.debug("区划坐标已更新", address=area)
+        db.commit()
+        db.refresh(area)
+        updated_count += 1
+        logger.debug("区划坐标已更新", id=area.id, address=area.area_name)
 
-    logger.info("completed")
+    logger.info("经纬度同步完成", updated_count=updated_count)
+    return updated_count

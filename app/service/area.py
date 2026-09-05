@@ -2,7 +2,7 @@ import json
 import threading
 import time
 import requests
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -332,7 +332,12 @@ def sync_area_data(db: Session) -> int:
 
 
 def get_all_area_names(db: Session) -> list[Area]:
-    area_names = select(Area).where(Area.area_name.isnot(None), Area.area_name != '', Area.longitude.isnot(None))
+    """查询名称有效且缺少经纬度的行政区划。"""
+    area_names = select(Area).where(
+        Area.area_name.isnot(None),
+        Area.area_name != '',
+        or_(Area.longitude.is_(None), Area.latitude.is_(None)),
+    )
     return list(db.scalars(area_names))
 
 

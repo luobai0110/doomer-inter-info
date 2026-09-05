@@ -72,7 +72,7 @@ class GetPositionTests(unittest.TestCase):
             patch("app.service.deal_lon.get_with_retry", side_effect=get_with_retry),
             patch("app.service.deal_lon.settings", settings),
         ):
-            get_position(db)
+            updated_count = get_position(db)
 
         self.assertEqual(
             {"address": "中国Test Area", "city": "110000", "key": "test-key"},
@@ -80,6 +80,7 @@ class GetPositionTests(unittest.TestCase):
         )
         self.assertEqual(116.397428, area.longitude)
         self.assertEqual(39.90923, area.latitude)
+        self.assertEqual(1, updated_count)
         self.assertTrue(db.committed)
         self.assertEqual([area], db.refreshed)
 

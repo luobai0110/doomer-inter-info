@@ -55,6 +55,7 @@ API 文档：
 | `GET` | `/health/db` | 执行 `SELECT 1`，检查数据库连通性 |
 | `GET` | `/data/weather` | 从 Open-Meteo 拉取天气数据并保存 |
 | `POST` | `/data/area/sync` | 同步省、市、区县、街道行政区划 |
+| `GET` | `/data/sync/position` | 补齐缺失经纬度，`data` 为更新记录数 |
 
 区划同步返回示例：
 

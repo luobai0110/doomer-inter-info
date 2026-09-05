@@ -21,11 +21,14 @@ def get_position(db: Session) -> None:
 
     for area_name in areas:
         logger.info("请求高德地理编码", address=area_name)
+        logger.info("请求信息, url=%s, address=%s", base_url=base_url, area_name=area_name)
         resp = get_with_retry(
             url=base_url,
             params={"address": area_name, "key": settings.amap_key},
             timeout=REQUEST_TIMEOUT,
         )
+
+        logger.info("响应信息", base_url, area_name)
         if resp.status_code != 200:
             logger.warning(
                 "高德地理编码请求失败",
@@ -33,7 +36,7 @@ def get_position(db: Session) -> None:
                 status_code=resp.status_code,
             )
             continue
-
+        logger.info("响应细心, url=%s, address=%s", resp=resp.text)
         data = resp.json()
         geocodes = data.get("geocodes") or []
         if not geocodes:

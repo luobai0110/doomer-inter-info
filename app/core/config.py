@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     )
 
     # ---------- 日志 ----------
+    service_name: str = "inter-info"
+    environment: str = "local"
     log_level: str = "INFO"
     log_dir: str = "/var/logs/inter"
 

@@ -21,7 +21,7 @@ def get_position(db: Session) -> None:
 
     for area in areas:
         logger.info("请求高德地理编码", address=area.area_name)
-        logger.info("请求信息", base_url=base_url, area_name=area)
+        logger.info("请求信息", base_url=base_url, area_name=area.area_name)
         resp = get_with_retry(
             url=base_url,
             params={"address": area.full_name, "key": settings.amap_key, "city": area.area_code[:6]},

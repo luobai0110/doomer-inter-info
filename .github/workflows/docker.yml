@@ -68,7 +68,8 @@ jobs:
       - name: Trigger redeploy webhook
         if: steps.build-and-push.outcome == 'success'
         env:
-          WEBHOOK_URL: ${{ secrets.REDEPLOY_WEBHOOK_URL }}
+          # master 推送独立的重新部署 webhook；REDEPLOY_WEBHOOK_URL_MASTER 暂未配置时回退到原变量。
+          WEBHOOK_URL: ${{ github.ref == 'refs/heads/master' && secrets.REDEPLOY_WEBHOOK_URL_MASTER || secrets.REDEPLOY_WEBHOOK_URL }}
           REPOSITORY: ${{ github.repository }}
           BRANCH: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}

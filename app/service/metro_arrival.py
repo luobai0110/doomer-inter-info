@@ -13,6 +13,9 @@ from app.schema.metro import (
 from app.service.snowflake import get_unique_code, get_unique_codes
 
 
+SNOWFLAKE_ID_BATCH_SIZE = 512
+
+
 def create_metro_arrival_record(
         db: Session,
         data: MetroArrivalRecordCreate,
@@ -39,19 +42,26 @@ def create_metro_arrival_records(
         db: Session,
         data_list: list[MetroArrivalRecordCreate],
 ) -> list[MetroArrivalRecord]:
-    """批量新增到站记录，一次请求 n=len(data) 个雪花 ID。"""
+    """批量新增到站记录，每批最多 512 条并单独提交。"""
     if not data_list:
         return []
 
-    codes = get_unique_codes(len(data_list))
-    records = [MetroArrivalRecord(**data.model_dump()) for data in data_list]
-    for record, code in zip(records, codes):
-        record.record_code = str(code)
-    db.add_all(records)
-    db.commit()
-    for record in records:
-        db.refresh(record)
-    return records
+    created: list[MetroArrivalRecord] = []
+    for start in range(0, len(data_list), SNOWFLAKE_ID_BATCH_SIZE):
+        chunk = data_list[start:start + SNOWFLAKE_ID_BATCH_SIZE]
+        codes = get_unique_codes(len(chunk))
+        records: list[MetroArrivalRecord] = []
+        for data, code in zip(chunk, codes):
+            record = MetroArrivalRecord(**data.model_dump())
+            record.record_code = str(code)
+            records.append(record)
+
+        db.add_all(records)
+        db.commit()
+        for record in records:
+            db.refresh(record)
+        created.extend(records)
+    return created
 
 
 def get_metro_arrival_record(

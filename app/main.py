@@ -31,6 +31,7 @@ from app.service.metro_arrival import (
     list_metro_arrival_records,
     update_metro_arrival_record,
 )
+from app.service.metro_stat import calc_daily_avg_arrival_time
 from app.service.station import sync_station_data
 from app.service.weather import get_weather_data
 
@@ -101,6 +102,20 @@ def sync_metro(db: Session = Depends(get_db)) -> ApiResponse[int]:
     """拉取并入库最新地铁到站 JSON 数据，返回新增数量。"""
     inserted = get_metro_info(db=db)
     return ok(inserted)
+
+
+@app.post("/data/metro/stat/daily-avg", response_model=ApiResponse[int])
+def calc_metro_daily_avg(
+    db: Session = Depends(get_db),
+    stat_date: date | None = None,
+) -> ApiResponse[int]:
+    """手动计算每日地铁到站平均时刻，返回统计分组数。
+
+    可选 query 参数 stat_date（ISO 日期）只重算该日，不传则全量重算；
+    拉取地铁数据的入口在每次拉取后也会自动触发一次全量重算。
+    """
+    count = calc_daily_avg_arrival_time(db=db, stat_date=stat_date)
+    return ok(count)
 
 
 if __name__ == "__main__":

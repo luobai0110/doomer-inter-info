@@ -7,6 +7,7 @@ import requests
 
 from app.schema.metro import MetroArrivalRecordCreate
 from app.service.metro_arrival import create_metro_arrival_records
+from app.service.metro_stat import calc_daily_avg_arrival_time
 
 date_url = "https://data.hangzhou.gov.cn/dop/dataOpen/dataDetail.action"
 file_url = "https://data.hangzhou.gov.cn/dop/dataOpen/dataFileList.action"
@@ -74,6 +75,12 @@ def get_metro_info(db: Session) -> int:
                 db=db,
             )
     logger.info("执行完成")
+    # 每次拉取地铁数据后自动重算每日平均到站时间统计；失败不影响拉取结果。
+    try:
+        calc_daily_avg_arrival_time(db)
+    except Exception:
+        db.rollback()
+        logger.exception("拉取地铁数据后自动统计每日平均到站时间失败")
     return inserted
 
 

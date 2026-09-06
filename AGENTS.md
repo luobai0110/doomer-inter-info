@@ -17,6 +17,10 @@
 
 Startup creates missing database tables and disposes the connection pool on shutdown. A reachable PostgreSQL instance configured through `.env` is required for database health checks.
 
+## External Service Constraints
+
+- The snowflake ID service (`app/service/snowflake.py`, URL configured via `snowflake_id_url`) accepts at most **512 IDs per request**: `?n=512` succeeds, `n=513` returns HTTP 400. When more IDs are needed, request them in batches of 512 or fewer — the limit is defined as `MAX_CODES_PER_REQUEST` in `app/service/snowflake.py`, and `_backfill_missing_map_codes` (`app/service/station.py`) and `_backfill_missing_stat_codes` (`app/service/metro_stat.py`) implement the batching pattern.
+
 ## Coding Style & Naming Conventions
 
 - Use Python type hints for function signatures and public data models.

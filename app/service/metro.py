@@ -1,14 +1,12 @@
 import json
 
-from fastapi import Depends
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
 from app.core.logging import get_logger
 import requests
 
 from app.schema.metro import MetroArrivalRecordCreate
-from app.service.metro_arrival import create_metro_arrival_record_from_json
+from app.service.metro_arrival import create_metro_arrival_records
 
 date_url = "https://data.hangzhou.gov.cn/dop/dataOpen/dataDetail.action"
 file_url = "https://data.hangzhou.gov.cn/dop/dataOpen/dataFileList.action"
@@ -37,12 +35,16 @@ def metro_update_info() -> str | None:
     response = requests.post(url=date_url, data=f'postData={post_data_str}', headers=headers)
     if response.status_code == 200:
         data = response.json()
-        return data['data_update_date']
+        res_info = data.get("resInfo") or {}
+        return res_info.get("data_update_date")
     return None
 
 
-def get_metro_info():
+def get_metro_info(db: Session) -> int:
     update_date = metro_update_info()
+    if update_date is None:
+        raise ValueError("地铁数据详情接口未返回 data_update_date")
+
     params = {
         "type": "ALL",
         "resId": 85055,
@@ -56,27 +58,33 @@ def get_metro_info():
     json_data = json.dumps(params)
     response = requests.post(url=file_url, data=f'postData={json_data}')
     logger.info("响应内容", url=file_url, params=params)
-    json_file = []
+    inserted = 0
     if response.status_code == 200:
         data = response.json()
         file_list = data['fileList']
         for file in file_list:
             if file['fileType'] == 'Json':
-                json_file.append(file)
+                inserted += download_file(
+                    url=file['downloadPath'],
+                    filename=file['fileName'] + '.json',
+                    db=db,
+                )
 
-    for url in json_file:
-        download_file(url['downloadPath'], url['fileName'] + '.json')
+    return inserted
 
 
-def download_file(url, filename, db: Session = Depends(get_db)):
+def download_file(url: str, filename: str, db: Session) -> int:
     logger.info("下载文件", url=url, filename=filename)
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
 
-        data = response.json()
-        if isinstance(data, list):
-            for item in data[1:]:
-                create_metro_arrival_record_from_json(db=db, data=item)
-    except Exception as e:
-        logger.error("异常", exinfo=e)
+    data = response.json()
+    if not isinstance(data, list):
+        return 0
+
+    # 公共数据平台导出的 JSON 第一行是字段说明，不是数据。
+    record_list = [
+        MetroArrivalRecordCreate.model_validate(item)
+        for item in data[1:]
+    ]
+    return len(create_metro_arrival_records(db=db, data_list=record_list))

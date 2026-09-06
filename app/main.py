@@ -88,9 +88,10 @@ def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
 
 
 @app.get("/data/sync/metro", response_model=ApiResponse[int])
-def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
-    get_metro_info()
-    return ok()
+def sync_metro(db: Session = Depends(get_db)) -> ApiResponse[int]:
+    """拉取并入库最新地铁到站 JSON 数据，返回新增数量。"""
+    inserted = get_metro_info(db=db)
+    return ok(inserted)
 
 
 if __name__ == "__main__":

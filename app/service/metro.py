@@ -30,9 +30,10 @@ def metro_update_info() -> str | None:
             "pageSize": 10
         }
     }
-    logger.info("请求地址", url=date_url, params=params)
     post_data_str = json.dumps(params, ensure_ascii=False)
+    logger.info("请求地址", url=date_url, params=post_data_str)
     response = requests.post(url=date_url, data=f'postData={post_data_str}', headers=headers)
+    logger.info("响应内容", url=date_url,resp=response.text)
     if response.status_code == 200:
         data = response.json()
         res_info = data.get("resInfo") or {}
@@ -54,22 +55,22 @@ def get_metro_info(db: Session) -> int:
         "data_update_date": update_date,
         "pageSplit": {"pageNumber": 1, "pageSize": 10}
     }
-    logger.info("请求地址", url=date_url, params=params)
     json_data = json.dumps(params)
+    logger.info("请求地址", url=date_url, params=json_data)
     response = requests.post(url=file_url, data=f'postData={json_data}')
-    logger.info("响应内容", url=file_url, params=params)
+    logger.info("响应内容", url=file_url, params=response.text)
     inserted = 0
-    if response.status_code == 200:
-        data = response.json()
-        file_list = data['fileList']
-        for file in file_list:
-            if file['fileType'] == 'Json':
-                inserted += download_file(
-                    url=file['downloadPath'],
-                    filename=file['fileName'] + '.json',
-                    db=db,
-                )
-
+    response.raise_for_status()
+    data = response.json()
+    file_list = data['fileList']
+    for file in file_list:
+        if file['fileType'] == 'Json':
+            inserted += download_file(
+                url=file['downloadPath'],
+                filename=file['fileName'] + '.json',
+                db=db,
+            )
+    logger.info("执行完成")
     return inserted
 
 

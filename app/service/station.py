@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.core.logging import get_logger
 from app.model.metro import MetroArrivalRecord
 from app.model.station import Station
-from app.service.snowflake import get_unique_codes
+from app.service.snowflake import MAX_CODES_PER_REQUEST, get_unique_codes
 
 logger = get_logger(__name__)
 
@@ -39,11 +39,11 @@ def _ensure_station_unique_index(db: Session) -> None:
 
 
 def _backfill_missing_map_codes(db: Session) -> int:
-    """为 map_code 为空的站点批量申请雪花 ID 并回填。
+    """为 map_code 为空的站点分批申请雪花 ID 并回填。
 
-    首次启动同步后全部站点均无 map_code，此处一次性批量申请；
-    后续同步仅对新入库且缺码的站点补发。申请失败时不阻断启动，
-    记录异常后等待下次同步重试。
+    首次启动同步后全部站点均无 map_code，此处按雪花服务单次上限
+    分批申请；后续同步仅对新入库且缺码的站点补发。单批失败时保留
+    已补发进度，不阻断启动，剩余站点下次同步时重试。
     """
     stations = list(
         db.scalars(
@@ -56,19 +56,26 @@ def _backfill_missing_map_codes(db: Session) -> int:
         logger.debug("站点均已具备雪花ID，无需补发")
         return 0
 
-    logger.info("发现缺少雪花ID的站点，开始批量申请", count=len(stations))
+    logger.info(
+        "发现缺少雪花ID的站点，开始分批申请",
+        count=len(stations),
+        batch_size=MAX_CODES_PER_REQUEST,
+    )
+    assigned = 0
     try:
-        codes = get_unique_codes(len(stations))
+        for start in range(0, len(stations), MAX_CODES_PER_REQUEST):
+            chunk = stations[start : start + MAX_CODES_PER_REQUEST]
+            codes = get_unique_codes(len(chunk))
+            for station, code in zip(chunk, codes, strict=True):
+                station.map_code = str(code)
+            db.commit()
+            assigned += len(chunk)
     except Exception:
-        logger.exception("雪花ID申请失败，本次跳过补发，下次同步时重试")
         db.rollback()
-        return 0
-
-    for station, code in zip(stations, codes, strict=True):
-        station.map_code = str(code)
-    db.commit()
-    logger.info("站点雪花ID补发完成", count=len(stations))
-    return len(stations)
+        logger.exception("雪花ID申请失败，剩余站点下次同步时重试", assigned=assigned)
+    if assigned:
+        logger.info("站点雪花ID补发完成", count=assigned)
+    return assigned
 
 
 def sync_station_data(db: Session = Depends(get_db)) -> int:

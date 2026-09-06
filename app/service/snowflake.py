@@ -9,6 +9,10 @@ from app.core.logging import get_logger
 
 REQUEST_TIMEOUT = 30
 BACKOFF_SECONDS = (0.5, 1.0, 2.0)
+
+# 服务端单次申请数量上限（n=513 返回 400），超过时须分批申请。
+MAX_CODES_PER_REQUEST = 512
+
 logger = get_logger(__name__)
 
 

@@ -1,7 +1,7 @@
 import logging
 import socket
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
@@ -88,16 +88,14 @@ def _drop_color_message(
     return event_dict
 
 
-def _add_utc_timestamp(
+def _add_local_timestamp(
     _logger: Any,
     _method_name: str,
     event_dict: EventDict,
 ) -> EventDict:
-    """按 UTC 生成 ISO-8601 毫秒级时间戳。"""
-    now = datetime.now(timezone.utc)
-    event_dict["timestamp"] = (
-        f"{now.strftime('%Y-%m-%dT%H:%M:%S')}.{now.microsecond // 1000:03d}Z"
-    )
+    """按容器本地时区生成 ISO-8601 毫秒级时间戳（时区跟随 TZ 环境变量）。"""
+    now = datetime.now().astimezone()
+    event_dict["timestamp"] = now.isoformat(timespec="milliseconds")
     return event_dict
 
 
@@ -142,7 +140,7 @@ def configure_logging() -> None:
         structlog.stdlib.add_log_level,
         structlog.stdlib.ExtraAdder(),
         _drop_color_message,
-        _add_utc_timestamp,
+        _add_local_timestamp,
         _add_runtime_fields,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,

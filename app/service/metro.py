@@ -1,3 +1,5 @@
+import json
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,11 @@ file_url = "https://data.hangzhou.gov.cn/dop/dataOpen/dataFileList.action"
 
 logger = get_logger(__name__)
 
+headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+}
+
 
 def metro_update_info() -> str | None:
     ## 获取更新时间 ##
@@ -26,7 +33,8 @@ def metro_update_info() -> str | None:
         }
     }
     logger.info("请求地址", url=date_url, params=params)
-    response = requests.post(url=date_url, data=params)
+    post_data_str = json.dumps(params, ensure_ascii=False)
+    response = requests.post(url=date_url, data=f'postData={post_data_str}', headers=headers)
     if response.status_code == 200:
         data = response.json()
         return data['data_update_date']
@@ -45,7 +53,8 @@ def get_metro_info():
         "pageSplit": {"pageNumber": 1, "pageSize": 10}
     }
     logger.info("请求地址", url=date_url, params=params)
-    response = requests.post(url=file_url, data=params)
+    json_data = json.dumps(params)
+    response = requests.post(url=file_url, data=f'postData={json_data}')
     logger.info("响应内容", url=file_url, params=params)
     json_file = []
     if response.status_code == 200:

@@ -89,7 +89,6 @@ def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
 
 @app.get("/data/sync/metro", response_model=ApiResponse[int])
 def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
-    """补齐区划经纬度，返回更新的记录数量。"""
     get_metro_info()
     return ok()
 

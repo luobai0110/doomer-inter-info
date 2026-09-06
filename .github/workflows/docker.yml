@@ -47,7 +47,8 @@ jobs:
             type=ref,event=branch,enable=${{ github.ref != 'refs/heads/master' }}
             type=raw,value=master,enable=${{ github.ref == 'refs/heads/master' }}
             type=raw,value={{date 'YYYYMMDDHHmmss' tz='Asia/Shanghai'}},enable=${{ github.ref == 'refs/heads/master' }}
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev/dev' }}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/dev/dev' }}
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/release' }}
             type=semver,pattern={{version}}
 
       - name: Build and push image

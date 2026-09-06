@@ -1,5 +1,3 @@
-import json
-
 import requests
 
 from app.core.config import settings
@@ -17,15 +15,10 @@ logger = get_logger(__name__)
 
 
 def _log_http_detail(resp: requests.Response) -> None:
-    """输出雪花 ID 服务的请求与响应详情。"""
+    """输出雪花 ID 服务的请求详情与响应摘要。"""
     request_body = resp.request.body
     if isinstance(request_body, bytes):
         request_body = request_body.decode("utf-8", errors="replace")
-
-    try:
-        response_body = json.dumps(resp.json(), ensure_ascii=False)
-    except ValueError:
-        response_body = resp.text
 
     logger.info(
         "HTTP 请求详情",
@@ -34,12 +27,16 @@ def _log_http_detail(resp: requests.Response) -> None:
         headers=dict(resp.request.headers),
         body=request_body,
     )
+    # 响应只记录状态码与返回的雪花 ID 数量，避免完整 ID 数组刷屏。
+    try:
+        payload = resp.json()
+    except ValueError:
+        payload = None
     logger.info(
         "HTTP 响应详情",
         status_code=resp.status_code,
         url=resp.url,
-        headers=dict(resp.headers),
-        body=response_body,
+        id_count=len(payload) if isinstance(payload, list) else None,
     )
 
 

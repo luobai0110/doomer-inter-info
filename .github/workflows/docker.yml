@@ -45,6 +45,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch,enable=${{ github.ref != 'refs/heads/master' }}
+            type=raw,value=master,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value={{date 'YYYYMMDDHHmmss' tz='Asia/Shanghai'}},enable=${{ github.ref == 'refs/heads/master' }}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/dev/dev' }}
             type=semver,pattern={{version}}
 

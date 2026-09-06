@@ -50,8 +50,8 @@ def get_metro_info(db: Session) -> int:
         "type": "ALL",
         "resId": 85055,
         "source_type_str": "A",
-        "version": "",
-        "source_code": "",
+        "version": "4",
+        "source_code": "nQBNV/20220415170440338797",
         "data_update_date": update_date,
         "pageSplit": {"pageNumber": 1, "pageSize": 10}
     }

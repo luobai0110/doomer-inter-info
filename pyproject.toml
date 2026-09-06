@@ -26,6 +26,7 @@ dependencies = [
     "uvicorn>=0.52.4",
     "structlog>=26.1.0",
     "pandas-stubs~=3.0.5",
+    "pytest>=9.1.1",
 ]
 [tool.fastapi]
 entrypoint = "app.main:app"

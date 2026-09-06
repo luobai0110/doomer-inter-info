@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from datetime import date
+
+from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,21 @@ from app.core.response import ApiResponse, ok
 from app.service.area import sync_area_data, update_area_by_id
 from app.service.deal_lon import get_position
 from app.service.import_region import import_regions
+from app.schema.metro import (
+    MetroArrivalRecordCreate,
+    MetroArrivalRecordOut,
+    MetroArrivalRecordPage,
+    MetroArrivalRecordUpdate,
+)
+from app.service.metro import get_metro_info
+from app.service.metro_arrival import (
+    create_metro_arrival_record,
+    create_metro_arrival_records,
+    delete_metro_arrival_record,
+    get_metro_arrival_record,
+    list_metro_arrival_records,
+    update_metro_arrival_record,
+)
 from app.service.weather import get_weather_data
 
 configure_logging()
@@ -62,14 +79,24 @@ def db_health(db: Session = Depends(get_db)) -> ApiResponse[dict[str, str]]:
     db.execute(text("SELECT 1"))
     return ok({"status": "ok"})
 
+
 @app.get("/data/sync/position", response_model=ApiResponse[int])
 def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
     """补齐区划经纬度，返回更新的记录数量。"""
     updated_count = get_position(db)
     return ok(updated_count)
 
+
+@app.get("/data/sync/metro", response_model=ApiResponse[int])
+def sync_position(db: Session = Depends(get_db)) -> ApiResponse[int]:
+    """补齐区划经纬度，返回更新的记录数量。"""
+    get_metro_info()
+    return ok()
+
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host="127.0.0.1",

@@ -1,10 +1,18 @@
 from datetime import date, datetime, time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class MetroArrivalRecordCreate(BaseModel):
     """地铁到站记录新增入参，record_code 由服务端雪花 ID 生成。"""
+
+    @field_validator("arrvie_time", mode="before")
+    @classmethod
+    def normalize_end_of_day(cls, value: object) -> object:
+        # 数据源用 24:00 表示当天最后一刻，Python time 无法表示，统一存为 00:00。
+        if value == "24:00":
+            return "00:00"
+        return value
 
     line_name: str = Field(max_length=50)
     line_code: str = Field(max_length=10)

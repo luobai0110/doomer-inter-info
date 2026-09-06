@@ -2,13 +2,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.http import get_with_retry
+from app.core.http import RateLimiter, get_with_retry
 from app.core.logging import get_logger
 from app.service.area import get_all_area_names
 
 base_url = "https://restapi.amap.com/v3/geocode/geo"
 REQUEST_TIMEOUT = 30
+AMAP_REQUESTS_PER_SECOND = 3
 logger = get_logger(__name__)
+_amap_rate_limiter = RateLimiter(AMAP_REQUESTS_PER_SECOND)
 
 
 def get_position(db: Session) -> int:
@@ -27,6 +29,7 @@ def get_position(db: Session) -> int:
             url=base_url,
             params={"address": area.full_name, "key": settings.amap_key, "city": area.area_code[:6]},
             timeout=REQUEST_TIMEOUT,
+            rate_limiter=_amap_rate_limiter,
         )
 
         logger.info("响应信息", resp=resp.text)
@@ -44,7 +47,7 @@ def get_position(db: Session) -> int:
         if not geocodes:
             logger.warning(
                 "高德地理编码结果为空",
-                address=area,
+                code=area.code,
                 infocode=data.get("infocode"),
             )
             continue

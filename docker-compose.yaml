@@ -1,6 +1,6 @@
 services:
   inter-info:
-    image: registry-vpc.cn-chengdu.aliyuncs.com/doomer/inter-info:master
+    image: registry-vpc.cn-chengdu.aliyuncs.com/doomer/inter-info:${VERSION}
     container_name: inter-info
     env_file:
       - .env

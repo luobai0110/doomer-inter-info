@@ -58,6 +58,7 @@ API 文档：
 | `GET` | `/data/weather` | 从 Open-Meteo 拉取天气数据并保存 |
 | `POST` | `/data/area/sync` | 同步省、市、区县、街道行政区划 |
 | `GET` | `/data/sync/position` | 补齐缺失经纬度，`data` 为更新记录数 |
+| `GET` | `/data/sync/metro` | 拉取并入库最新地铁到站数据，`data` 为新增记录数 |
 
 区划同步返回示例：
 
@@ -83,6 +84,11 @@ API 文档：
 
 > 注意：`create_all` 只创建缺失表，不会给已存在的 `area` 表自动补新列。历史数据库需要先手工执行迁移或
 > `ALTER TABLE` 补齐 `street_code`、`street_name` 等字段。
+
+## 定时任务
+
+应用启动后会注册 APScheduler 任务，每天 `05:00`（Asia/Shanghai）调用地铁数据同步逻辑。任务使用独立数据库会话，
+同步完成后记录新增数量，失败时输出错误日志，不会中断 API 服务。应用关闭时会先停止调度器，再释放数据库连接池。
 
 ## 行政区划 Excel 导入
 

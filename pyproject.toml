@@ -27,6 +27,7 @@ dependencies = [
     "structlog>=26.1.0",
     "pandas-stubs~=3.0.5",
     "pytest>=9.1.1",
+    "apscheduler>=3.11.3",
 ]
 [tool.fastapi]
 entrypoint = "app.main:app"

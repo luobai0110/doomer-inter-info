@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.database import Base, engine, get_db
 from app.core.logging import configure_logging
 from app.core.response import ApiResponse, ok
+from app.core.scheduler import create_scheduler
 from app.service.area import sync_area_data, update_area_by_id
 from app.service.deal_lon import get_position
 from app.service.import_region import import_regions
@@ -37,11 +38,16 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """应用生命周期：启动时建表，关闭时释放数据库连接池。"""
+    """应用生命周期：启动时建表并启动定时任务，关闭时释放资源。"""
     # 目前无模型时为空操作；后续注册模型后可自动创建表。
     Base.metadata.create_all(bind=engine)
-    yield
-    engine.dispose()
+    scheduler = create_scheduler()
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
+        engine.dispose()
 
 
 app = FastAPI(title="inter-info", lifespan=lifespan)

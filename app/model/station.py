@@ -16,7 +16,7 @@ class Station(Base):
     __table_args__ = (
         Index("idx_station_map_code", "map_code"),
         Index("idx_station_station_name", "station_name"),
-        Index("idx_station_station_code", "station_code"),
+        Index("ux_station_station_code", "station_code", unique=True),
         {"comment": "车站信息表"},
     )
 

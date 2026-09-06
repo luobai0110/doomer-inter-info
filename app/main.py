@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 # 引入模型以注册到 Base.metadata，供启动时自动建表
 from app import model  # noqa: F401
 from app.core.config import settings
-from app.core.database import Base, engine, get_db
+from app.core.database import Base, SessionLocal, engine, get_db
 from app.core.logging import configure_logging
 from app.core.response import ApiResponse, ok
 from app.core.scheduler import create_scheduler
@@ -31,6 +31,7 @@ from app.service.metro_arrival import (
     list_metro_arrival_records,
     update_metro_arrival_record,
 )
+from app.service.station import sync_station_data
 from app.service.weather import get_weather_data
 
 configure_logging()
@@ -41,6 +42,8 @@ async def lifespan(app: FastAPI):
     """应用生命周期：启动时建表并启动定时任务，关闭时释放资源。"""
     # 目前无模型时为空操作；后续注册模型后可自动创建表。
     Base.metadata.create_all(bind=engine)
+    with SessionLocal() as db:
+        sync_station_data(db)
     scheduler = create_scheduler()
     scheduler.start()
     try:
